@@ -69,6 +69,8 @@ meas: 2/═══════════════╩══╩═
 {'11': 979, '01': 27, '00': 1, '10': 17}
 ```
 
+As seen, after 1024 attempt of measuring we found `11` bits 979 times 
+
 ## About Grover's Algorithm
 
 Grover's Algorithm is a quantum search algorithm that amplifies the probability of the correct solution while suppressing incorrect states.
