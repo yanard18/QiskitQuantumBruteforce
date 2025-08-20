@@ -1,23 +1,27 @@
-from qiskit import QuantumCircuit
+from qiskit import QuantumCircuit, transpile
+from qiskit.circuit.library import PhaseOracle, GroverOperator
 from qiskit.quantum_info import SparsePauliOp
 from qiskit.transpiler import generate_preset_pass_manager
-from qiskit_ibm_runtime import EstimatorV2 as Estimator
+from qiskit_ibm_runtime import QiskitRuntimeService, EstimatorV2 as Estimator # api calls
+from qiskit.transpiler import generate_preset_pass_manager
+from matplotlib import pyplot as plt
 
-from qiskit_ibm_runtime import QiskitRuntimeService # api calls
+# --- Secret setup ---
+SECRET = "00"   # Secret string to find
+n_qubits = len(SECRET)
 
+# --- Build Grover's Oracle ---
+expression = " & ".join([f"x{i}" if bit == "1" else f"~x{i}" for i, bit in enumerate(SECRET)])
+oracle = PhaseOracle(expression)
+grover_op = GroverOperator(oracle)
 
 observables_labels = ["IZ", "IX", "ZI", "XI", "ZZ", "XX"]
 observables = [SparsePauliOp(label) for label in observables_labels]
 
- 
-# Create a new circuit with two qubits
-qc = QuantumCircuit(2)
- 
-# Add a Hadamard gate to qubit 0
-qc.h(0)
- 
-# Perform a controlled-X gate on qubit 1, controlled by qubit 0
-qc.cx(0, 1)
+# --- Build Grover's Circuit ---
+qc = QuantumCircuit(n_qubits) # so we go with 2 qbits
+qc.h(range(n_qubits)) # puts all qbits into superposition
+qc.compose(grover_op, inplace=True)
 
 # Return a drawing of the circuit using MatPlotLib ("mpl").
 # These guides are written by using Jupyter notebooks, which
@@ -25,6 +29,12 @@ qc.cx(0, 1)
 # If you're running this in a script, use `print(qc.draw())` to
 # print a text drawing.
 print(qc.draw())
+
+# --- Observables for estimation ---
+# Here we just use Z for all qubits as a simple example
+observables_labels = [f"{'Z'*i + 'I'*(n_qubits-i)}" for i in range(1, n_qubits+1)]
+observables = [SparsePauliOp(label) for label in observables_labels]
+ 
 
 service = QiskitRuntimeService()
 backend = service.least_busy(simulator=False, operational=True)
@@ -61,10 +71,7 @@ job_result = job.result()
 # so contains information on all six.
 pub_result = job.result()[0]
 
-from matplotlib import pyplot as plt
- 
 values = pub_result.data.evs
- 
 errors = pub_result.data.stds
  
 # plotting graph
@@ -72,3 +79,4 @@ plt.plot(observables_labels, values, "-o")
 plt.xlabel("Observables")
 plt.ylabel("Values")
 plt.show()
+
